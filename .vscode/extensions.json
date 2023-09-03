@@ -2,6 +2,12 @@
 	// See http://go.microsoft.com/fwlink/?LinkId=827846
 	// for the documentation about the extensions.json format
 	"recommendations": [
-		"dbaeumer.vscode-eslint"
+		"dbaeumer.vscode-eslint",
+		"christian-kohler.npm-intellisense",
+		"spoonscen.es6-mocha-snippets",
+		"github.copilot",
+		"github.copilot-chat",
+		"eamodio.gitlens",
+		"loiane.ts-extension-pack"
 	]
 }
