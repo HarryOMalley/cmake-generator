@@ -1,7 +1,7 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
-import { ILibrary, ILibraryType, ISourceType, ISourceVisibility, createLibrary } from './cmake_generator';
+import * as CMake from './cmake_generator';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -15,14 +15,14 @@ async function showFilePickerQuickPick(): Promise<string | undefined> {
 		currentDir = workspaceFolders[0].uri.fsPath;
 		console.log("currentDir: " + currentDir);
 	} else {
-		console.log("No workspace folders found.")
+		console.log("No workspace folders found.");
 		// 2. Check the directory of the active file.
 		const activeEditor = vscode.window.activeTextEditor;
 		if (activeEditor && activeEditor.document.uri.scheme === 'file') {
 			currentDir = path.dirname(activeEditor.document.uri.fsPath);
 			console.log("currentDir: " + currentDir);
 		} else {
-			console.log("No active editor found.")
+			console.log("No active editor found.");
 			// 3. Prompt the user to choose a base directory.
 			const userChosenDir = await vscode.window.showOpenDialog({
 				canSelectFiles: false,
@@ -102,26 +102,29 @@ export function activate(context: vscode.ExtensionContext) {
 	// The commandId parameter must match the command field in package.json
 	let disposable = vscode.commands.registerCommand('cmake-generator.create-library', async () => {
 		const initialPath = vscode.workspace.workspaceFolders ? vscode.workspace.workspaceFolders[0].uri.fsPath : '.';
+		console.log(initialPath);
+		vscode.window.showInformationMessage(`Initial path: ${initialPath}`);
 		const editor = vscode.window.activeTextEditor;
 
 		if (editor) {
 			const documentPath = editor.document.uri.fsPath;
 			const docDir = path.dirname(documentPath);
 			// Usage example
-			showFilePickerQuickPick().then(file => {
+			await showFilePickerQuickPick().then(file => {
 				if (file) {
 					console.log(`Selected file: ${file}`);
 				} else {
 					console.log('No file was selected.');
 				}
 			});
-
-			// if (selectedPath) {
-			// 	vscode.window.showInformationMessage(`Selected file: ${selectedPath}`);
-			// }
-		} else {
-			vscode.window.showErrorMessage('No active editor found.');
 		}
+
+		// 	// if (selectedPath) {
+		// 	// 	vscode.window.showInformationMessage(`Selected file: ${selectedPath}`);
+		// 	// }
+		// } else {
+		// 	vscode.window.showErrorMessage('No active editor found.');
+		// }
 		vscode.window.showInformationMessage('Creating a CMake Library!');
 		// Example Usage:
 		const libraryName = await vscode.window.showInputBox({
@@ -134,10 +137,10 @@ export function activate(context: vscode.ExtensionContext) {
 			return;
 		}
 
-		let libraryTypes: ILibraryType[] = Object.values(ILibraryType);
+		let libraryTypes: CMake.LibraryType[] = Object.values(CMake.LibraryType);
 
 		// Show quick pick to the user
-		const libraryTypeItems: vscode.QuickPickItem[] = libraryTypes.map((type: ILibraryType) => {
+		const libraryTypeItems: vscode.QuickPickItem[] = libraryTypes.map((type: CMake.LibraryType) => {
 			return { label: type.toString(), description: '' };
 		});
 
@@ -150,7 +153,7 @@ export function activate(context: vscode.ExtensionContext) {
 			return;
 		}
 
-		const libraryType: ILibraryType = selectedLibraryType.label as ILibraryType;
+		const libraryType: CMake.LibraryType = selectedLibraryType.label as CMake.LibraryType;
 
 		if (!libraryType) {
 			vscode.window.showErrorMessage('Library type is required');
@@ -159,32 +162,36 @@ export function activate(context: vscode.ExtensionContext) {
 
 		vscode.window.showInformationMessage(`Creating ${libraryName}! Library type: ${libraryType}`);
 
-		const options: vscode.OpenDialogOptions = {
-			canSelectMany: true,      // Allows selecting multiple files.
-			openLabel: 'Open',        // Label for the open button.
-			filters: {
-				'Text files': ['txt'], // Filter files by extension (in this case, .txt files).
-				'All files': ['*']     // Allow selecting any type of file.
-			}
-		};
+		// const options: vscode.OpenDialogOptions = {
+		// 	canSelectMany: true,      // Allows selecting multiple files.
+		// 	openLabel: 'Open',        // Label for the open button.
+		// 	filters: {
+		// 		// eslint-disable-next-line @typescript-eslint/naming-convention
+		// 		'Text files': ['txt'], // Filter files by extension (in this case, .txt files).
+		// 		// eslint-disable-next-line @typescript-eslint/naming-convention
+		// 		'All files': ['*']     // Allow selecting any type of file.
+		// 	}
+		// };
 
 		// Show the file picker.
-		const fileUris = await vscode.window.showOpenDialog(options);
+		// const fileUris = await vscode.window.showOpenDialog(options);
 
-		if (fileUris && fileUris.length > 0) {
-			for (const fileUri of fileUris) {
-				vscode.window.showInformationMessage(`Selected file: ${fileUri.fsPath}`);
-			}
-		}
+		// if (fileUris && fileUris.length > 0) {
+		// 	for (const fileUri of fileUris) {
+		// 		vscode.window.showInformationMessage(`Selected file: ${fileUri.fsPath}`);
+		// 	}
+		// }
 
 
-		const exampleLibrary: ILibrary = {
-			name: libraryName,
-			type: libraryType,
+		const exampleLibrary: CMake.Library = {
+			config: {
+				name: libraryName,
+				type: libraryType,
+			},
 			sources: [
 				{
-					type: ISourceType.REGULAR,
-					visibility: ISourceVisibility.PRIVATE,
+					type: CMake.SourceType.regular,
+					visibility: CMake.CMakeVisibility.private,
 					files: [
 						{
 							name: "source1",
@@ -194,8 +201,8 @@ export function activate(context: vscode.ExtensionContext) {
 					]
 				},
 				{
-					type: ISourceType.HEADER,
-					visibility: ISourceVisibility.PUBLIC,
+					type: CMake.SourceType.header,
+					visibility: CMake.CMakeVisibility.public,
 					files: [
 						{
 							name: "header1",
@@ -207,10 +214,64 @@ export function activate(context: vscode.ExtensionContext) {
 						}
 					]
 				}
-			]
+			],
+			includeDirectories: [{
+				visibility: CMake.CMakeVisibility.public,
+				directories: [
+					"include",
+				]
+			}],
+			linkLibraries: [{
+				visibility: CMake.CMakeVisibility.public,
+				libraries: [
+					"lib1",
+					"lib2",
+				]
+			},
+			{
+				visibility: CMake.CMakeVisibility.private,
+				libraries: [
+					"lib3",
+					"lib4",
+				]
+			}],
+			installConfig: {
+				headerDestination: "include/" + libraryName,
+				libraryDestination: "lib",
+			}
 		};
 
-		console.log(createLibrary(exampleLibrary));
+		let lib: string = CMake.createLibrary(exampleLibrary);
+		vscode.window.showInformationMessage('Generated configuration, pasting into editor...');
+		const editor2 = vscode.window.activeTextEditor;
+		if (editor2) {
+			const edit = new vscode.WorkspaceEdit();
+			const position = editor2.selection.active;
+			const text = 'Hello, world!';
+		
+			edit.insert(editor2.document.uri, position, text);
+			vscode.workspace.applyEdit(edit);
+		
+			const range = new vscode.Range(position, position.translate(0, text.length));
+			const decoration = { range, hoverMessage: 'This text was added by the extension.' };
+			const decorationType = vscode.window.createTextEditorDecorationType({ backgroundColor: 'yellow' });
+			editor2.setDecorations(decorationType, [decoration]);
+		
+			const uri = editor2.document.uri;
+			const document = await vscode.workspace.openTextDocument(uri);
+			const textEditor = await vscode.window.showTextDocument(document, { preview: false });
+			textEditor.setDecorations(decorationType, [decoration]);
+		
+			const acceptChanges = await vscode.window.showInformationMessage('Do you want to accept the changes?', 'Yes', 'No');
+			if (acceptChanges === 'Yes') {
+				await vscode.workspace.applyEdit(edit);
+			} else {
+				editor2.setDecorations(decorationType, []);
+				textEditor.setDecorations(decorationType, []);
+			}
+		} else {
+			vscode.window.showErrorMessage('No active editor found.');
+		}
 	});
 
 	context.subscriptions.push(disposable);
